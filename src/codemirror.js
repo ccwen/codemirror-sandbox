@@ -9,7 +9,8 @@ var CodeMirror = React.createClass({
 		onCursorActivity: React.PropTypes.func,
 		options: React.PropTypes.object,
 		path: React.PropTypes.string,
-		value: React.PropTypes.string
+		value: React.PropTypes.string,
+		onBeforeCopy:React.PropTypes.func
 	},
 
 	getInitialState:function () {
@@ -19,10 +20,18 @@ var CodeMirror = React.createClass({
 	},
 	cursorActivity:function(cm) { 
 		this.props.onCursorActivity&&this.props.onCursorActivity(cm);
-	} 
+	}
 	,componentDidMount:function () {
 		var textareaNode = React.findDOMNode(this.refs.textarea);
-		this.codeMirror = CM.fromTextArea(textareaNode, this.props.options);
+
+		this.codeMirror = CM(textareaNode, {
+  		value: this.props.value,
+  		mode:  "javascript",
+  		inputStyle:"contenteditable"
+		});
+
+		//CM.fromTextArea(textareaNode, this.props.options);
+		if (this.props.onBeforeCopy) this.codeMirror.on('beforeCopyToClipboard', this.props.onBeforeCopy);
 		this.codeMirror.on('change', this.codemirrorValueChanged);
 		this.codeMirror.on('focus', this.focusChanged.bind(this, true));
 		this.codeMirror.on('blur', this.focusChanged.bind(this, false));
@@ -71,7 +80,8 @@ var CodeMirror = React.createClass({
 		}
 		return (
 			<div className={className}>
-				<textarea ref="textarea" name={this.props.path} defaultValue={this.props.value} autoComplete="off" />
+				<span ref="textarea"/>
+
 			</div>
 		);
 	}

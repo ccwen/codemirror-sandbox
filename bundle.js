@@ -1294,6 +1294,7 @@ ksanagap.boot("codemirror-sandbox",function(){
 
       on(te, "compositionstart", function() {
         var start = cm.getCursor("from");
+        if (input.composing) input.composing.range.clear()
         input.composing = {
           start: start,
           range: cm.markText(start, cm.getCursor("to"), {className: "CodeMirror-composing"})
@@ -1625,7 +1626,13 @@ ksanagap.boot("codemirror-sandbox",function(){
         if (e.clipboardData && !ios) {
           e.preventDefault();
           e.clipboardData.clearData();
-          e.clipboardData.setData("text/plain", lastCopied.join("\n"));
+          var toclipboard=lastCopied.join("\n");
+          if (cm._handlers&& cm._handlers.beforeCopyToClipboard) {
+            cm._handlers.beforeCopyToClipboard.forEach(function(handler){
+              toclipboard=handler(toclipboard,cm);
+            })
+          }
+          e.clipboardData.setData("text/plain", toclipboard);
         } else {
           // Old-fashioned briefly-focus-a-textarea hack
           var kludge = hiddenTextarea(), te = kludge.firstChild;
@@ -6961,7 +6968,7 @@ ksanagap.boot("codemirror-sandbox",function(){
           txt.setAttribute("cm-text", "\t");
           builder.col += tabWidth;
         } else if (m[0] == "\r" || m[0] == "\n") {
-          var txt = content.appendChild(elt("span", m[0] == "\r" ? "␍" : "␤", "cm-invalidchar"));
+          var txt = content.appendChild(elt("span", m[0] == "\r" ? "\u240d" : "\u2424", "cm-invalidchar"));
           txt.setAttribute("cm-text", m[0]);
           builder.col += 1;
         } else {
@@ -8220,7 +8227,7 @@ ksanagap.boot("codemirror-sandbox",function(){
 
   // The inverse of countColumn -- find the offset that corresponds to
   // a particular column.
-  function findColumn(string, goal, tabSize) {
+  var findColumn = CodeMirror.findColumn = function(string, goal, tabSize) {
     for (var pos = 0, col = 0;;) {
       var nextTab = string.indexOf("\t", pos);
       if (nextTab == -1) nextTab = string.length;
@@ -8513,14 +8520,16 @@ ksanagap.boot("codemirror-sandbox",function(){
 
   // KEY NAMES
 
-  var keyNames = {3: "Enter", 8: "Backspace", 9: "Tab", 13: "Enter", 16: "Shift", 17: "Ctrl", 18: "Alt",
-                  19: "Pause", 20: "CapsLock", 27: "Esc", 32: "Space", 33: "PageUp", 34: "PageDown", 35: "End",
-                  36: "Home", 37: "Left", 38: "Up", 39: "Right", 40: "Down", 44: "PrintScrn", 45: "Insert",
-                  46: "Delete", 59: ";", 61: "=", 91: "Mod", 92: "Mod", 93: "Mod", 107: "=", 109: "-", 127: "Delete",
-                  173: "-", 186: ";", 187: "=", 188: ",", 189: "-", 190: ".", 191: "/", 192: "`", 219: "[", 220: "\\",
-                  221: "]", 222: "'", 63232: "Up", 63233: "Down", 63234: "Left", 63235: "Right", 63272: "Delete",
-                  63273: "Home", 63275: "End", 63276: "PageUp", 63277: "PageDown", 63302: "Insert"};
-  CodeMirror.keyNames = keyNames;
+  var keyNames = CodeMirror.keyNames = {
+    3: "Enter", 8: "Backspace", 9: "Tab", 13: "Enter", 16: "Shift", 17: "Ctrl", 18: "Alt",
+    19: "Pause", 20: "CapsLock", 27: "Esc", 32: "Space", 33: "PageUp", 34: "PageDown", 35: "End",
+    36: "Home", 37: "Left", 38: "Up", 39: "Right", 40: "Down", 44: "PrintScrn", 45: "Insert",
+    46: "Delete", 59: ";", 61: "=", 91: "Mod", 92: "Mod", 93: "Mod",
+    106: "*", 107: "=", 109: "-", 110: ".", 111: "/", 127: "Delete",
+    173: "-", 186: ";", 187: "=", 188: ",", 189: "-", 190: ".", 191: "/", 192: "`", 219: "[", 220: "\\",
+    221: "]", 222: "'", 63232: "Up", 63233: "Down", 63234: "Left", 63235: "Right", 63272: "Delete",
+    63273: "Home", 63275: "End", 63276: "PageUp", 63277: "PageDown", 63302: "Insert"
+  };
   (function() {
     // Number keys
     for (var i = 0; i < 10; i++) keyNames[i + 48] = keyNames[i + 96] = String(i);
@@ -8825,7 +8834,7 @@ ksanagap.boot("codemirror-sandbox",function(){
 
   // THE END
 
-  CodeMirror.version = "5.6.0";
+  CodeMirror.version = "5.6.1";
 
   return CodeMirror;
 });
@@ -8833,13 +8842,28 @@ ksanagap.boot("codemirror-sandbox",function(){
 },{}],"C:\\ksana2015\\codemirror-sandbox\\src\\bookmark.js":[function(require,module,exports){
 var React=require("react");
 var E=React.createElement;
+var IL=require("./interline");
+
+var Handle=React.createClass({displayName: "Handle",
+	mousemove:function(e){
+		console.log(Math.random())
+	}
+	,render:function() {
+
+		return E("span",{onMouseMove:this.mousemove,className:"handle"},"1")
+	}
+})
+
 var Bookmark=React.createClass({displayName: "Bookmark",
 	render:function() {
-		return E("span",null,"*****");
+		 return E(IL.Container,null
+			,E(IL.Super, {}, E(Handle) )
+			,E(IL.Embed, {}, "X")
+			);
 	}
 })
 module.exports=Bookmark;
-},{"react":"react"}],"C:\\ksana2015\\codemirror-sandbox\\src\\codemirror.js":[function(require,module,exports){
+},{"./interline":"C:\\ksana2015\\codemirror-sandbox\\src\\interline.js","react":"react"}],"C:\\ksana2015\\codemirror-sandbox\\src\\codemirror.js":[function(require,module,exports){
 var CM = require('codemirror');
 var React = require('react');
 
@@ -8851,7 +8875,8 @@ var CodeMirror = React.createClass({displayName: "CodeMirror",
 		onCursorActivity: React.PropTypes.func,
 		options: React.PropTypes.object,
 		path: React.PropTypes.string,
-		value: React.PropTypes.string
+		value: React.PropTypes.string,
+		onBeforeCopy:React.PropTypes.func
 	},
 
 	getInitialState:function () {
@@ -8861,10 +8886,18 @@ var CodeMirror = React.createClass({displayName: "CodeMirror",
 	},
 	cursorActivity:function(cm) { 
 		this.props.onCursorActivity&&this.props.onCursorActivity(cm);
-	} 
+	}
 	,componentDidMount:function () {
 		var textareaNode = React.findDOMNode(this.refs.textarea);
-		this.codeMirror = CM.fromTextArea(textareaNode, this.props.options);
+
+		this.codeMirror = CM(textareaNode, {
+  		value: this.props.value,
+  		mode:  "javascript",
+  		inputStyle:"contenteditable"
+		});
+
+		//CM.fromTextArea(textareaNode, this.props.options);
+		if (this.props.onBeforeCopy) this.codeMirror.on('beforeCopyToClipboard', this.props.onBeforeCopy);
 		this.codeMirror.on('change', this.codemirrorValueChanged);
 		this.codeMirror.on('focus', this.focusChanged.bind(this, true));
 		this.codeMirror.on('blur', this.focusChanged.bind(this, false));
@@ -8913,7 +8946,8 @@ var CodeMirror = React.createClass({displayName: "CodeMirror",
 		}
 		return (
 			React.createElement("div", {className: className}, 
-				React.createElement("textarea", {ref: "textarea", name: this.props.path, defaultValue: this.props.value, autoComplete: "off"})
+				React.createElement("span", {ref: "textarea"})
+
 			)
 		);
 	}
@@ -8921,25 +8955,77 @@ var CodeMirror = React.createClass({displayName: "CodeMirror",
 });
 
 module.exports = CodeMirror;
-},{"codemirror":"C:\\ksana2015\\codemirror-sandbox\\node_modules\\codemirror\\lib\\codemirror.js","react":"react"}],"C:\\ksana2015\\codemirror-sandbox\\src\\main.jsx":[function(require,module,exports){
+},{"codemirror":"C:\\ksana2015\\codemirror-sandbox\\node_modules\\codemirror\\lib\\codemirror.js","react":"react"}],"C:\\ksana2015\\codemirror-sandbox\\src\\interline.js":[function(require,module,exports){
+try {
+	var React=require("react-native");
+	var PureRenderMixin=null;
+} catch(e) {
+	var React=require("react/addons");
+	var PureRenderMixin=React.addons.PureRenderMixin;
+}
+var update=React.addons.update, E=React.createElement, PT=React.PropTypes;
+
+var Embed=React.createClass({
+	displayName:"InterlineEmbed"
+	,render:function() {
+		return E("span",this.props,this.props.children);
+	}
+});
+var Super=React.createClass({
+	displayName:"InterlineSuper"
+	,render:function() {
+		return E("div",{className:"interline",style:{position:"absolute",left:0,top:"-0.4em",width:"200px"}}
+			,this.props.children);
+	}
+});
+var Sub=React.createClass({
+	displayName:"InterlineSub"
+	,render:function() {
+		return E("div",{className:"interline",style:{position:"absolute",left:0,top:"0.6em",width:"200px"}}
+			,this.props.children);
+	}
+});
+var Container=React.createClass({
+	displayName:"InterlineContainer"
+	,render:function() {
+		return E("span",{style:{position:"relative"}}
+			,this.props.children);
+	}
+});
+
+module.exports={Container:Container,Super:Super, Sub:Sub, Embed:Embed};
+},{"react-native":"react-native","react/addons":"react/addons"}],"C:\\ksana2015\\codemirror-sandbox\\src\\main.jsx":[function(require,module,exports){
 var React=require("react");
 var E=React.createElement;
 var CodeMirror=require("./codemirror");
-var text="0123456789\n0123456789";
+var text1="0123456789";
+var text="";
 var Bookmark=require("./bookmark");
 var maincomponent = React.createClass({displayName: "maincomponent",
   getInitialState:function() {
     return {result:[],tofind:"君子"};
   }
+  ,componentWillMount:function() {
+    for (var i=0;i<10000;i++) {
+      text+=i+":"+text1+Math.random()+"\n";
+    }
+  }
   ,componentDidMount:function() {
     this.cm=this.refs.cm.getCodeMirror();
 
-    this.cm.getDoc().markText( {line:0,ch:1} , {line:0,ch:5} , 
-      {className:"hl0"} );
+    for (var i=0;i<100;i++) {
+      this.cm.getDoc().markText( {line:i*10,ch:1} , {line:i*10,ch:5} , 
+        {className:"hl0"} );
 
 
-    this.cm.getDoc().markText( {line:0,ch:3} , {line:0,ch:7} , 
-      {className:"underline"} );    
+      this.cm.getDoc().markText( {line:i*10,ch:3} , {line:i*10,ch:7} , 
+        {className:"underline"} );    
+
+    }
+  }
+  ,onBeforeCopy:function(s,cm) {
+    var c=cm.getDoc().getCursor();
+    return  s+"@"+c.line+":"+c.ch;
   }
   ,onClick:function(){
 
@@ -8962,7 +9048,7 @@ var maincomponent = React.createClass({displayName: "maincomponent",
       React.createElement("button", {onClick: this.onClick}, "bookmark"), 
       React.createElement("button", {onClick: this.onclearbookmark}, "clear"), 
       React.createElement("button", {onClick: this.refresh}, "refresh"), 
-      React.createElement(CodeMirror, {ref: "cm", value: text})
+      React.createElement(CodeMirror, {ref: "cm", value: text, options: {lineWiseCopyCut:true}, onBeforeCopy: this.onBeforeCopy})
     );
   }
 });
@@ -9425,7 +9511,7 @@ var boot=function(appId,cb) {
 				clearInterval(timer);
 				cb();
 			}
-		},1000);
+		},100);
 }
 
 
