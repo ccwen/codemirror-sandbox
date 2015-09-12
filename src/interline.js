@@ -16,14 +16,14 @@ var Embed=React.createClass({
 var Super=React.createClass({
 	displayName:"InterlineSuper"
 	,render:function() {
-		return E("div",{className:"interline",style:{position:"absolute",left:0,top:"-0.4em",width:"200px"}}
+		return E("div",{className:"interline",style:{position:"absolute",left:0,top:"-0.7em",width:"100%"}}
 			,this.props.children);
 	}
 });
 var Sub=React.createClass({
 	displayName:"InterlineSub"
 	,render:function() {
-		return E("div",{className:"interline",style:{position:"absolute",left:0,top:"0.6em",width:"200px"}}
+		return E("div",{className:"interline",style:{position:"absolute",left:"-0.5em",top:"0.2em",width:"100%"}}
 			,this.props.children);
 	}
 });

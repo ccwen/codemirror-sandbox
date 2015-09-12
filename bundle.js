@@ -1629,7 +1629,7 @@ ksanagap.boot("codemirror-sandbox",function(){
           var toclipboard=lastCopied.join("\n");
           if (cm._handlers&& cm._handlers.beforeCopyToClipboard) {
             cm._handlers.beforeCopyToClipboard.forEach(function(handler){
-              toclipboard=handler(toclipboard,cm);
+              toclipboard=handler(toclipboard,cm,e);
             })
           }
           e.clipboardData.setData("text/plain", toclipboard);
@@ -8845,12 +8845,14 @@ var E=React.createElement;
 var IL=require("./interline");
 
 var Handle=React.createClass({displayName: "Handle",
-	mousemove:function(e){
-		console.log(Math.random())
+	getInitialState:function() {
+		return {text:"qq"}
+	}
+	,mousemove:function(e){
+		this.setState({text:Math.random().toString().substr(2,2)})
 	}
 	,render:function() {
-
-		return E("span",{onMouseMove:this.mousemove,className:"handle"},"1")
+		return E("span",{onMouseMove:this.mousemove,className:"rubyhandle"},this.state.text)
 	}
 })
 
@@ -8858,13 +8860,14 @@ var Bookmark=React.createClass({displayName: "Bookmark",
 	render:function() {
 		 return E(IL.Container,null
 			,E(IL.Super, {}, E(Handle) )
-			,E(IL.Embed, {}, "X")
+			,E(IL.Embed, {}, null)
 			);
 	}
 })
 module.exports=Bookmark;
 },{"./interline":"C:\\ksana2015\\codemirror-sandbox\\src\\interline.js","react":"react"}],"C:\\ksana2015\\codemirror-sandbox\\src\\codemirror.js":[function(require,module,exports){
 var CM = require('codemirror');
+//require('codemirror/addon/selection/active-line');
 var React = require('react');
 
 var CodeMirror = React.createClass({displayName: "CodeMirror",
@@ -8893,12 +8896,16 @@ var CodeMirror = React.createClass({displayName: "CodeMirror",
 		this.codeMirror = CM(textareaNode, {
   		value: this.props.value,
   		mode:  "javascript",
-  		inputStyle:"contenteditable"
+  		inputStyle:"contenteditable",
+  		styleActiveLine:true,
+  		lineNumbers: true,
+  		gutters: ["CodeMirror-linenumbers"]
 		});
 
 		//CM.fromTextArea(textareaNode, this.props.options);
 		if (this.props.onBeforeCopy) this.codeMirror.on('beforeCopyToClipboard', this.props.onBeforeCopy);
 		this.codeMirror.on('change', this.codemirrorValueChanged);
+		if (this.props.onBeforeChange) this.codeMirror.on('beforeChange', this.props.onBeforeChange);
 		this.codeMirror.on('focus', this.focusChanged.bind(this, true));
 		this.codeMirror.on('blur', this.focusChanged.bind(this, false));
 		this.codeMirror.on('cursorActivity',this.cursorActivity);
@@ -8974,14 +8981,14 @@ var Embed=React.createClass({
 var Super=React.createClass({
 	displayName:"InterlineSuper"
 	,render:function() {
-		return E("div",{className:"interline",style:{position:"absolute",left:0,top:"-0.4em",width:"200px"}}
+		return E("div",{className:"interline",style:{position:"absolute",left:0,top:"-0.7em",width:"100%"}}
 			,this.props.children);
 	}
 });
 var Sub=React.createClass({
 	displayName:"InterlineSub"
 	,render:function() {
-		return E("div",{className:"interline",style:{position:"absolute",left:0,top:"0.6em",width:"200px"}}
+		return E("div",{className:"interline",style:{position:"absolute",left:"-0.5em",top:"0.2em",width:"100%"}}
 			,this.props.children);
 	}
 });
@@ -9001,6 +9008,8 @@ var CodeMirror=require("./codemirror");
 var text1="0123456789";
 var text="";
 var Bookmark=require("./bookmark");
+var Punc=require("./punc");
+var fullwidthpunc={",":"，",".":"。","!":"！","?":"？"}
 var maincomponent = React.createClass({displayName: "maincomponent",
   getInitialState:function() {
     return {result:[],tofind:"君子"};
@@ -9023,19 +9032,51 @@ var maincomponent = React.createClass({displayName: "maincomponent",
 
     }
   }
-  ,onBeforeCopy:function(s,cm) {
-    var c=cm.getDoc().getCursor();
-    return  s+"@"+c.line+":"+c.ch;
+  ,onBeforeCopy:function(s,cm,e) {
+    if (this.excerptcopy) {
+      var c=cm.getDoc().getCursor();
+      return  s+"@"+c.line+":"+c.ch;
+    } else return s;
   }
-  ,onClick:function(){
-
+  ,onCopyClick:function() {
+    this.excerptcopy=true;
+    document.execCommand("copy");
+    setTimeout(function(){
+      this.excerptcopy=false;
+    }.bind(this),100);
+  }
+  ,onBeforeChange:function(cm,obj) {
+    if (obj.from.ch===obj.to.ch && obj.to.line===obj.from.line && obj.origin==="+input") {
+      var punc=fullwidthpunc[obj.text[0]];
+      if (punc) {
+        setTimeout(function(){
+          this.addpunc(punc);  
+        }.bind(this),100);
+        
+        obj.cancel();
+      }
+    }
+  }
+  ,addpunc:function(punc) {
+    var c=this.cm.getDoc().getCursor("from");
     function makeWidget() {
         var hint = document.createElement('span');
-        React.render(E(Bookmark),hint);
+        React.render(E(Punc,null,{punc:punc}),hint);
         return hint;
     }
-    var c=this.cm.getDoc().getCursor();
+    this.punc=this.cm.getDoc().setBookmark( c,{widget:makeWidget() });    
+  }
+  ,onClick:function(){
+    var c=this.cm.getDoc().getCursor("from");
+    function makeWidget() {
+        var hint = document.createElement('span');
+        hint.className="segment";
+        React.render(E(Bookmark,null,{line:c.line}),hint);
+        return hint;
+    }
     this.bookmark=this.cm.getDoc().setBookmark( c,{widget:makeWidget() });
+
+    //this.cm.getDoc().addLineWidget(c.line,makeWidget(),{above:true});
   }
   ,onclearbookmark:function(){
     this.bookmark.clear();
@@ -9045,15 +9086,37 @@ var maincomponent = React.createClass({displayName: "maincomponent",
   }
   ,render: function() {
     return React.createElement("div", null, 
+      React.createElement("button", {onClick: this.onCopyClick}, "Excerpt Copy"), 
       React.createElement("button", {onClick: this.onClick}, "bookmark"), 
+      React.createElement("button", {onClick: this.onpunc}, "punc"), 
       React.createElement("button", {onClick: this.onclearbookmark}, "clear"), 
       React.createElement("button", {onClick: this.refresh}, "refresh"), 
-      React.createElement(CodeMirror, {ref: "cm", value: text, options: {lineWiseCopyCut:true}, onBeforeCopy: this.onBeforeCopy})
+      React.createElement(CodeMirror, {ref: "cm", value: text, onBeforeCopy: this.onBeforeCopy, onBeforeChange: this.onBeforeChange})
     );
   }
 });
 module.exports=maincomponent;
-},{"./bookmark":"C:\\ksana2015\\codemirror-sandbox\\src\\bookmark.js","./codemirror":"C:\\ksana2015\\codemirror-sandbox\\src\\codemirror.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-webruntime\\downloader.js":[function(require,module,exports){
+},{"./bookmark":"C:\\ksana2015\\codemirror-sandbox\\src\\bookmark.js","./codemirror":"C:\\ksana2015\\codemirror-sandbox\\src\\codemirror.js","./punc":"C:\\ksana2015\\codemirror-sandbox\\src\\punc.js","react":"react"}],"C:\\ksana2015\\codemirror-sandbox\\src\\punc.js":[function(require,module,exports){
+var React=require("react");
+var E=React.createElement;
+var IL=require("./interline");
+
+var ThePunc=React.createClass({displayName: "ThePunc",
+	render:function() {
+		return E("span",{className:"rubypunc"},this.props.punc)
+	}
+})
+
+var Punc=React.createClass({displayName: "Punc",
+	render:function() {
+		 return E(IL.Container,null
+			,E(IL.Embed, {}, null)
+			,E(IL.Sub, {}, E(ThePunc,this.props.children) )
+			);
+	}
+})
+module.exports=Punc;
+},{"./interline":"C:\\ksana2015\\codemirror-sandbox\\src\\interline.js","react":"react"}],"C:\\ksana2015\\node_modules\\ksana2015-webruntime\\downloader.js":[function(require,module,exports){
 
 var userCancel=false;
 var files=[];

@@ -2,5 +2,12 @@
 body {margin:0px;}
 #main {font-size:200%;}
 .hl0 {color:red;}
-.underline {text-decoration: underline}
-.handle {border-radius:50%;background: silver;boder-color:red;font-size:50%;}
+.underline {text-decoration: underline;cursor:pointer;}
+.rubyhandle {border-radius:50%;background: silver;boder-color:red;font-size:50%;cursor:pointer;}
+.rubyhandle::selection {background: transparent;}
+
+.rubypunc {color:red;font-size:100%;cursor:pointer}
+.rubypunc::selection {background: transparent;}
+
+.segment {background: pink}
+.CodeMirror { line-height: 1.6; }

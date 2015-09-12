@@ -1,4 +1,5 @@
 var CM = require('codemirror');
+//require('codemirror/addon/selection/active-line');
 var React = require('react');
 
 var CodeMirror = React.createClass({
@@ -27,12 +28,16 @@ var CodeMirror = React.createClass({
 		this.codeMirror = CM(textareaNode, {
   		value: this.props.value,
   		mode:  "javascript",
-  		inputStyle:"contenteditable"
+  		inputStyle:"contenteditable",
+  		styleActiveLine:true,
+  		lineNumbers: true,
+  		gutters: ["CodeMirror-linenumbers"]
 		});
 
 		//CM.fromTextArea(textareaNode, this.props.options);
 		if (this.props.onBeforeCopy) this.codeMirror.on('beforeCopyToClipboard', this.props.onBeforeCopy);
 		this.codeMirror.on('change', this.codemirrorValueChanged);
+		if (this.props.onBeforeChange) this.codeMirror.on('beforeChange', this.props.onBeforeChange);
 		this.codeMirror.on('focus', this.focusChanged.bind(this, true));
 		this.codeMirror.on('blur', this.focusChanged.bind(this, false));
 		this.codeMirror.on('cursorActivity',this.cursorActivity);

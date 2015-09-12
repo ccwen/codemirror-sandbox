@@ -11,7 +11,7 @@
     "height": 700
   },
   "dependencies":{
-    "codemirror": "git+https://github.com/ksanaforge/codemirror.git",
+    "codemirror": "git+https://github.com/ksanaforge/codemirror.git"
   },
   "scripts" : {
   },
